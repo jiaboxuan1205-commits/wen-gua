@@ -1,0 +1,14 @@
+{
+  "name": "wengua",
+  "version": "1.0.0",
+  "description": "问卦 —— 基于《周易》通行本全文与 AI 解卦的占筮网站（零依赖）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:data": "node scripts/build-data.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
