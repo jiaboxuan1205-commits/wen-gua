@@ -114,6 +114,7 @@ button {
 .site-nav a {
   position: relative;
   padding: 0.2rem 0;
+  white-space: nowrap;
   transition: color 0.3s;
 }
 
@@ -918,6 +919,137 @@ main {
 }
 
 /* ==========================================================================
+   问卦录
+   ========================================================================== */
+
+.record-wrap { max-width: 620px; margin: 0 auto; padding-top: 1rem; }
+
+.record-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0 0.2rem;
+}
+
+.record-count { font-size: 0.85rem; color: var(--ink-faint); letter-spacing: 0.1em; }
+
+.record-clear {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  padding: 0.3rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  letter-spacing: 0.1em;
+  transition: all 0.3s;
+}
+.record-clear:hover { color: var(--cinnabar); border-color: var(--cinnabar); }
+
+.record-list { display: flex; flex-direction: column; gap: 0.7rem; }
+
+.record-card {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  width: 100%;
+  text-align: left;
+  padding: 1rem 1.2rem;
+  background: var(--paper-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s var(--ease);
+}
+
+.record-card:hover {
+  border-color: var(--line);
+  transform: translateY(-2px);
+}
+.record-card:hover .record-q { color: var(--cinnabar); }
+
+.record-hex {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 66px;
+}
+
+.record-meta { flex: 1; min-width: 0; }
+
+.record-q {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 0.3rem;
+  transition: color 0.3s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record-sub {
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.record-sub .record-guas { color: var(--ink-soft); }
+.record-sub .record-dot { opacity: 0.5; }
+.record-tag {
+  color: var(--cinnabar);
+  border: 1px solid var(--cinnabar);
+  border-radius: 3px;
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.record-time {
+  flex: none;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.03em;
+  align-self: flex-start;
+  padding-top: 0.2rem;
+}
+
+.record-empty,
+.record-noai {
+  text-align: center;
+  color: var(--ink-faint);
+  padding: 3rem 1rem;
+  letter-spacing: 0.08em;
+}
+.record-noai { padding: 1.5rem 1rem; font-size: 0.9rem; }
+
+/* 记录详情弹层 */
+.record-detail-time {
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+.record-detail-q {
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin-bottom: 1.6rem;
+  line-height: 1.7;
+}
+.record-detail-hexes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.5rem, 6vw, 3.5rem);
+  flex-wrap: wrap;
+  margin-bottom: 1.8rem;
+}
+.record-detail-hexes .result-hex-name { font-size: 1.4rem; margin-top: 1rem; }
+.record-ai { margin-top: 0.6rem; }
+.record-detail-actions { margin-top: 1.6rem; text-align: center; }
+
+/* ==========================================================================
    设置
    ========================================================================== */
 
@@ -1005,8 +1137,8 @@ main {
 }
 
 @media (max-width: 600px) {
-  .site-header { gap: 1.2rem; padding: 1.2rem 1rem 0.9rem; }
-  .site-nav { gap: 1rem; font-size: 0.92rem; letter-spacing: 0.15em; }
+  .site-header { gap: 0.8rem; padding: 1.2rem 0.9rem 0.9rem; }
+  .site-nav { gap: 0.72rem; font-size: 0.9rem; letter-spacing: 0.02em; }
   .brand-seal { width: 2.5rem; height: 2.5rem; font-size: 0.88rem; }
   main { padding: 0.5rem 1.1rem 3rem; }
   .coins-row { gap: 1rem; }

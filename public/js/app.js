@@ -15,6 +15,7 @@ import {
 import { buildMessages } from './prompt.js';
 import { getSettings, saveSettings, fetchServerConfig, streamInterpret } from './api.js';
 import { renderMarkdown, escapeHtml } from './markdown.js';
+import { loadHistory, addRecord, updateRecord, deleteRecord, clearHistory } from './history.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (html) => {
@@ -70,8 +71,8 @@ function hexagramEl({ values = null, array = null, small = false, marks = true }
    路由
    ========================================================================== */
 
-const VIEWS = ['divine', 'canon', 'zhuan', 'settings'];
-const ROUTES = { '': 'divine', canon: 'canon', zhuan: 'zhuan', settings: 'settings' };
+const VIEWS = ['divine', 'canon', 'zhuan', 'record', 'settings'];
+const ROUTES = { '': 'divine', canon: 'canon', zhuan: 'zhuan', record: 'record', settings: 'settings' };
 const rendered = new Set();
 
 function router() {
@@ -96,6 +97,7 @@ function router() {
     if (name === 'canon') renderCanon();
     if (name === 'zhuan') renderZhuan();
   }
+  if (name === 'record') renderRecord(); // 每次进入刷新列表
   if (name === 'settings') renderSettings(); // 每次进入刷新状态
   window.scrollTo({ top: 0 });
 }
@@ -461,6 +463,15 @@ function renderResult() {
 
   $('#btnAgain').addEventListener('click', renderAsk);
   $('#btnAI').addEventListener('click', startAI);
+
+  // 每卦自动存入问卦录（仅存重建所需的最小数据；AI 解读待生成后补上）
+  if (!divine.recordId) {
+    divine.recordId = addRecord({
+      question: divine.question,
+      method: divine.method,
+      values: divine.values.slice(),
+    });
+  }
 }
 
 /* ==========================================================================
@@ -522,6 +533,7 @@ function startAI() {
         return;
       }
       paint(true);
+      if (divine.recordId) updateRecord(divine.recordId, { ai: text }); // 解读存入问卦录
     },
     onError(msg, status) {
       output.hidden = true;
@@ -644,6 +656,160 @@ function renderZhuan(activeId = 'xici') {
     tabs.appendChild(b);
   }
   show(activeId);
+}
+
+/* ==========================================================================
+   问卦录
+   ========================================================================== */
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function recordSummary(rec) {
+  const { origin, changed, movingIdx } = deriveHexagrams(rec.values);
+  const move = movingIdx.length ? `${CN_NUM[movingIdx.length - 1]}爻动` : '六爻安静';
+  return { origin, changed, movingIdx, move };
+}
+
+function renderRecord() {
+  const root = $('#view-record');
+  const list = loadHistory();
+
+  root.innerHTML = `
+    <div class="canon-head">
+      <h1 class="view-title">问卦录</h1>
+      <p class="view-subtitle">${
+        list.length ? `共 ${list.length} 卦 · 存于本机浏览器` : '此处留存你问过的卦'
+      }</p>
+    </div>
+    <div class="record-wrap"></div>`;
+  const wrap = $('.record-wrap', root);
+
+  if (!list.length) {
+    wrap.innerHTML = `<div class="record-empty">
+      尚无记录。<a href="#/" style="color:var(--cinnabar);border-bottom:1px solid currentColor">去问一卦 →</a>
+    </div>`;
+    return;
+  }
+
+  const bar = el(`<div class="record-bar">
+    <span class="record-count">最近 ${list.length} 卦</span>
+    <button class="record-clear" id="btnClearHist">清空</button>
+  </div>`);
+  wrap.appendChild(bar);
+
+  const listEl = el('<div class="record-list"></div>');
+  for (const rec of list) {
+    const { origin, changed, move } = recordSummary(rec);
+    const card = el(`<button class="record-card">
+      <div class="record-hex"></div>
+      <div class="record-meta">
+        <div class="record-q">${escapeHtml(rec.question)}</div>
+        <div class="record-sub">
+          <span class="record-guas">${origin.name}${changed ? ` → ${changed.name}` : ''}</span>
+          <span class="record-dot">·</span>${MethodShort(rec.method)}
+          <span class="record-dot">·</span>${move}
+          ${rec.ai ? '<span class="record-tag">含解读</span>' : ''}
+        </div>
+      </div>
+      <time class="record-time">${fmtTime(rec.ts)}</time>
+    </button>`);
+    $('.record-hex', card).appendChild(hexagramEl({ array: origin.array, small: true }));
+    card.addEventListener('click', () => openRecordModal(rec));
+    listEl.appendChild(card);
+  }
+  wrap.appendChild(listEl);
+
+  $('#btnClearHist', root).addEventListener('click', () => {
+    if (confirm(`确定清空全部 ${list.length} 条问卦记录？此操作不可恢复。`)) {
+      clearHistory();
+      renderRecord();
+    }
+  });
+}
+
+function MethodShort(m) {
+  return m === 'yarrow' ? '大衍筮法' : '三钱法';
+}
+
+function openRecordModal(rec) {
+  const rootM = $('#modal-root');
+  const result = deriveHexagrams(rec.values);
+  const { origin, changed, movingIdx } = result;
+  const rule = divinationRule(result);
+  const citesHtml = rule.cites
+    .map((c) => {
+      const t = citeText(c);
+      return `<div class="cite"><span class="cite-title">${t.title}</span>${escapeHtml(t.text)}${
+        c.note ? `<span class="cite-note">（${c.note}）</span>` : ''
+      }</div>`;
+    })
+    .join('');
+
+  const overlay = el(`
+    <div class="modal-overlay">
+      <div class="modal-card" role="dialog" aria-label="问卦记录">
+        <button class="modal-close" aria-label="关闭">✕</button>
+        <p class="record-detail-time">${fmtTime(rec.ts)} · ${MethodShort(rec.method)} · ${
+    movingIdx.length ? `${CN_NUM[movingIdx.length - 1]}爻动` : '六爻安静'
+  }</p>
+        <p class="record-detail-q">所问：${escapeHtml(rec.question)}</p>
+        <div class="record-detail-hexes">
+          <div class="result-hex-block">
+            <div class="rd-origin"></div>
+            <div class="result-hex-name">${origin.fullName}</div>
+            <div class="result-hex-sub">本卦</div>
+          </div>
+          ${
+            changed
+              ? `<div class="result-arrow">→</div>
+          <div class="result-hex-block">
+            <div class="rd-changed"></div>
+            <div class="result-hex-name">${changed.fullName}</div>
+            <div class="result-hex-sub">之卦</div>
+          </div>`
+              : ''
+          }
+        </div>
+        <div class="rule-card">
+          <h4>当占之辞</h4>
+          <p class="rule-text">${rule.rule}</p>
+          ${citesHtml}
+        </div>
+        ${
+          rec.ai
+            ? `<div class="section-label">AI 解卦</div><div class="ai-output record-ai">${renderMarkdown(rec.ai)}</div>`
+            : `<div class="record-noai">此卦未生成 AI 解读。</div>`
+        }
+        <div class="record-detail-actions">
+          <button class="btn-ghost" id="btnDelRec">删除此记录</button>
+        </div>
+      </div>
+    </div>`);
+
+  $('.rd-origin', overlay).appendChild(hexagramEl({ values: rec.values }));
+  if (changed) $('.rd-changed', overlay).appendChild(hexagramEl({ array: changed.array, marks: false }));
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+  };
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target.closest('.modal-close')) close();
+  });
+  $('#btnDelRec', overlay).addEventListener('click', () => {
+    deleteRecord(rec.id);
+    close();
+    renderRecord();
+  });
+  document.addEventListener('keydown', onKey);
+  rootM.appendChild(overlay);
 }
 
 /* ==========================================================================
