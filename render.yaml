@@ -1,0 +1,17 @@
+# Render 蓝图：一键部署问卦为常驻 Web 服务（零依赖，无需构建）
+# 用法：Render Dashboard → New → Blueprint → 选此仓库即可
+services:
+  - type: web
+    name: wengua
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/config
+    autoDeploy: true
+    envVars:
+      # 默认模型；访客也可在「设置」页自行覆盖
+      - key: GLM_MODEL
+        value: glm-5.2
+      # 若要站长统一出 key（访客免填），在 Dashboard 手动加环境变量 GLM_API_KEY，
+      # 切勿写进本文件（会进 git 泄露）。当前采用「访客自带 key」，故不配置。

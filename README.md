@@ -36,6 +36,20 @@ node server.js
 
 API Key 也可以不放服务端：直接在网页「设置」里填写，密钥保存在浏览器 localStorage，由本地服务转发调用。
 
+## 部署
+
+问卦是常驻式服务（`server.js` 同时托管静态资源与 SSE 流式代理），适合部署在能跑长驻进程的平台。零依赖、零构建，`start` 即 `node server.js`，监听平台注入的 `PORT`。
+
+**Render（一键蓝图）**：Dashboard → New → Blueprint → 选本仓库，`render.yaml` 会自动配好。免费实例闲置约 15 分钟后休眠，下次访问首个请求需冷启动数十秒。
+
+**Railway**：New Project → Deploy from GitHub → 选本仓库，Nixpacks 自动识别 Node 并按 `Procfile`（`web: node server.js`）启动。
+
+**API Key 两种模式**（二选一，均已支持）：
+- *访客自带*（默认）：平台**不**配置 `GLM_API_KEY`，访客在「设置」页填自己的智谱 key，存于各自浏览器，不耗站长额度。
+- *站长统一出*：在平台 Dashboard 环境变量里加 `GLM_API_KEY`（**切勿写进仓库**），访客免填、共用站长额度。
+
+> 相比 Vercel 等 serverless 平台：本项目是流式 + 推理模型（glm-5.2 单次解卦约 20–40 秒），常驻服务无单请求超时限制，体验更稳；serverless 需改造为函数且受超时约束。
+
 ## 项目结构
 
 ```
